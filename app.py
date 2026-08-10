@@ -8,6 +8,15 @@ import sqlite3
 import json
 from collections import Counter
 from typing import Optional
+from pydantic import BaseModel
+from resume_agent import build_agent
+
+# Build the agent once at startup, not on every request - it's expensive to construct
+agent = build_agent()
+
+
+class ResumeRequest(BaseModel):
+    resume_text: str
 
 app = FastAPI(title="SkillRadar API", version="0.1.0")
 
@@ -84,3 +93,27 @@ def stats():
     conn.close()
 
     return {"total_jobs": total, "by_source": by_source}
+
+@app.post("/skill-gap")
+def skill_gap(request: ResumeRequest):
+    """Runs the resume through the LangGraph agent and returns a skill-gap report."""
+    result = agent.invoke({
+        "resume_text": request.resume_text,
+        "resume_skills": [],
+        "relevant_jobs": [],
+        "market_skills": [],
+        "gap_report": "",
+    })
+
+    return {
+        "resume_skills": result["resume_skills"],
+        "market_skills": result["market_skills"],
+        "matching_skills": sorted(
+            {s.lower() for s in result["resume_skills"]} & {s.lower() for s in result["market_skills"]}
+        ),
+        "missing_skills": sorted(
+            {s.lower() for s in result["market_skills"]} - {s.lower() for s in result["resume_skills"]}
+        ),
+        "similar_jobs": [j["title"] for j in result["relevant_jobs"][:5]],
+        "report": result["gap_report"],
+    }
