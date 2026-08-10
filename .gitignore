@@ -4,3 +4,4 @@ __pycache__/
 *.json
 skillradar.db
 .env
+chroma_store/
