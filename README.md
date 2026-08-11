@@ -1,5 +1,8 @@
 # SkillRadar
 
+**Live demo**: <https://skillradar-api-q6sh.onrender.com/docs>
+*(Free tier — may take 30-60s to wake up on first request)*
+
 An automated, NLP-powered job market intelligence pipeline. SkillRadar scrapes live job postings from multiple sources daily, extracts structured skill data using NLP, and serves it through a REST API.
 
 ## Problem
@@ -20,7 +23,7 @@ Job descriptions for tech roles change faster than most people can track manuall
 
 ## Architecture
 
-\```
+```text
 3 scrapers (python.org, RemoteOK API, WeWorkRemotely RSS)
         ↓
    Clean + Deduplicate
@@ -36,7 +39,7 @@ Job descriptions for tech roles change faster than most people can track manuall
    FastAPI REST API
         ↓
    Docker container
-\```
+```
 
 Automated daily via Windows Task Scheduler with retry-on-failure.
 
@@ -76,10 +79,15 @@ docker run -p 8000:8000 skillradar-api
 - RemoteOK descriptions occasionally contain non-English content that isn't fully filtered
 - The LangGraph agent currently requires Ollama running locally; it isn't yet containerized alongside the API
 - Uses a small local LLM (qwen3:8b) rather than a hosted model, trading output polish for zero ongoing API cost
+- The live demo runs a lightweight deployment without the resume-gap agent (no Ollama/LangGraph in the cloud); `/skill-gap` requires running the project locally with Ollama installed
+- On the free-tier deploy, the database is rebuilt fresh from a live pipeline run on every deploy rather than persisting between deploys
+
+## Completed
+
+- RAG-based resume skill-gap analysis using LangGraph
+- Deployed to a cloud host with a live public URL
 
 ## Roadmap
 
-- [x] RAG-based resume skill-gap analysis using LangGraph
 - [ ] Salary trend analysis over time
-- [ ] Deploy to a cloud host with a live public URL
 - [ ] Containerize Ollama alongside the API for a fully self-contained Docker setup
