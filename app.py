@@ -9,14 +9,24 @@ import json
 from collections import Counter
 from typing import Optional
 from pydantic import BaseModel
-from resume_agent import build_agent
 
-# Build the agent once at startup, not on every request - it's expensive to construct
-agent = build_agent()
+# The resume agent needs langgraph/chromadb/sentence-transformers, which are
+# deliberately excluded from requirements-deploy.txt to keep cloud deploys
+# lightweight. Import it defensively so the core data API still works
+# even when those packages aren't installed.
+try:
+    from resume_agent import build_agent
+    agent = build_agent()
+    AGENT_AVAILABLE = True
+except Exception as e:
+    print(f"Resume agent unavailable (expected in lightweight deployments): {e}")
+    agent = None
+    AGENT_AVAILABLE = False
 
 
 class ResumeRequest(BaseModel):
     resume_text: str
+
 
 app = FastAPI(title="SkillRadar API", version="0.1.0")
 
@@ -97,6 +107,9 @@ def stats():
 @app.post("/skill-gap")
 def skill_gap(request: ResumeRequest):
     """Runs the resume through the LangGraph agent and returns a skill-gap report."""
+    if not AGENT_AVAILABLE:
+        return {"error": "Resume agent not available in this deployment. Run locally with Ollama for this feature."}
+
     result = agent.invoke({
         "resume_text": request.resume_text,
         "resume_skills": [],
